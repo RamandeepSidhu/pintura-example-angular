@@ -17,3 +17,9 @@
   pintura-editor {
     box-shadow: 0 0 0 1px #eee;
   }
+  ::ng-deep .pintura-editor {
+    height: 600px;
+}
+.pintura-editor {
+  height: 600px;
+}

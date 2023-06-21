@@ -34,10 +34,31 @@ import {
   openEditor,
   processImage,
   PinturaImageState,
+  getEditorDefaults,
+  createDefaultColorOptions,
+  colorStringToColorArray,
 } from '@pqina/pintura';
 
 setPlugins(plugin_crop, plugin_finetune, plugin_filter, plugin_annotate);
+const downloadFile = (file: File): void => {
+  const link:any= document.createElement('a');
+  link.style.display = 'none';
+  link.href = URL.createObjectURL(file);
+  link.download = file.name;
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => {
+      URL.revokeObjectURL(link.href);
+      link.parentNode.removeChild(link);
+  }, 0);
+};
+const stringifyImageState = (imageState: PinturaImageState): string => {
+  return JSON.stringify(imageState, (k, v) => (v === undefined ? null : v));
+};
 
+const parseImageState = (str: string): PinturaImageState => {
+  return JSON.parse(str);
+};
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -45,33 +66,54 @@ setPlugins(plugin_crop, plugin_finetune, plugin_filter, plugin_annotate);
 })
 export class AppComponent {
   @ViewChild('inlineEditor') inlineEditor?: PinturaEditorComponent<any> = undefined;
-
+  editorDefaults: any = getEditorDefaults();
   customWidth: number = 0;
   customHeight: number = 0;
   imageWidth: number = 0;
   imageHeight: number = 0;
-    
-    aspectRatios: any[] = [
-      { ratio: 1, name: '1:1 - Square' },
-      { ratio: 4 / 3, name: '4:3 - Standard' },
-      { ratio: 16 / 9, name: '16:9 - Widescreen' },
-      { ratio: 21 / 9, name: '21:9 - Ultra-Wide' },
-      { ratio: 2.35, name: '2.35:1 - CinemaScope' },
-      { ratio: 5 / 4, name: '5:4 - SXGA' },
-      { ratio: 3 / 2, name: '3:2 - Classic' },
-      { ratio: 18 / 9, name: '18:9 - FullView' },
-      { ratio: 19.5 / 9, name: '19.5:9 - FullView Plus' },
-      { ratio: 3, name: '3:1 - Panorama' },
-      { ratio: 2, name: '2:1 - Univisium' },
-      { ratio: 9 / 16, name: '9:16 - Portrait' },
-      { ratio: 1.85, name: '1.85:1 - Standard widescreen cinematic aspect ratio' },
-      { ratio: 16 / 10, name: '16:10 - Widescreen' },
-      { ratio: 8 / 5, name: '8:5 - Widescreen' },
-      { ratio: 2 / 3, name: '2:3 - Medium format photography' },
-      { ratio: 7 / 5, name: '7:5 - Photography' },
-      { ratio: 4 / 5, name: '4:5 - Portrait' }
+
+  @ViewChild('buttonAddShape') buttonAddShape?: any;
+  @ViewChild('editor') editor?: any;
+
+    stickers: any = ['🎉', '😄', '👍', '👎', '🍕'];
+  resizeSizePresetOptions: any = [
+      [undefined, 'Auto'],
+      [128, 128],
+      [256, 256],
+      [512, 256],
+      [1024, 1024],
+  ];
+  fillOptions: any = [
+    [0, 0, 0, 0],
+    [1, 0, 0, 1],
+    ...Object.values(createDefaultColorOptions()),
+    colorStringToColorArray('rgba(0, 0, 255, .5)'),
+    'mesh-gradient-01.png',
+];
+  imageAnnotation: any = [
+      {
+          x: 0,
+          y: 0,
+          width: 128,
+          height: 128,
+          backgroundColor: [1, 0, 0],
+      },
+  ];
+  handleButtonClick(): void {
+    const updatedAnnotationList = [
+        ...this.editor.imageAnnotation,
+        {
+            id: 'circle',
+            x: 64,
+            y: 64,
+            rx: 128,
+            ry: 128,
+            backgroundColor: [0, 1, 0],
+        },
     ];
-        currentAspectRatioIndex: number = 0;
+
+    this.editor.imageAnnotation = updatedAnnotationList;
+}
   constructor(private sanitizer: DomSanitizer) {}
 
   // editor generic state
@@ -132,10 +174,6 @@ handleInlineLoad($event: any) {
         }
               }
     }
-  
-    // Reset custom height and width values
-    this.customHeight = 0;
-    this.customWidth = 0;
   }
   
 
@@ -275,9 +313,7 @@ handleInlineLoad($event: any) {
     const file = event.file;
     const reader = new FileReader();
     reader.onload = (e) => {
-      this.inlineSrc = e.target?.result as string;
-      this.currentAspectRatioIndex = 0; // Reset the aspect ratio to the first one
-  
+      this.inlineSrc = e.target?.result as string;  
       if (this.customWidth && this.customHeight) {
         // Calculate the maximum width and height based on the custom size
         const aspectRatio = this.customWidth / this.customHeight;
@@ -300,18 +336,6 @@ handleInlineLoad($event: any) {
 
   pondHandleActivateFile(event: any) {
     console.log('A file was activated', event);
-  }
-  get currentAspectRatio(): number {
-    return this.aspectRatios[this.currentAspectRatioIndex].ratio;
-  }
-  
-  toggleAspectRatio(): void {
-    this.currentAspectRatioIndex = (this.currentAspectRatioIndex + 1) % this.aspectRatios.length;
-  }
-  
-  getAspectRatioText(): string {
-    const currentAspectRatio = this.aspectRatios[this.currentAspectRatioIndex];
-    return `Current Aspect Ratio: ${currentAspectRatio.name}`;
   }
 
   updateCustomSize(): void {
@@ -340,4 +364,20 @@ handleInlineLoad($event: any) {
       this.inlineEditor.editor.imageState = updatedImageState;
     }
 }
+handleEditorProcess(imageState: any): void {
+  downloadFile(imageState.dest);
+  const imageStateStr = stringifyImageState(imageState.imageState);
+
+}
+
+storedImageState: string =
+'{"cropLimitToImage": true, "cropAspectRatio": null, ... }';
+
+handleEditorLoad(): void {
+// Add image state to history stack
+this.editor.history.write(parseImageState(this.storedImageState));
+
+}
+
+
 }
