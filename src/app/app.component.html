@@ -7,8 +7,8 @@
     </button>
     <label>{{ getAspectRatioText() }}</label>
   </p>
-  <input type="number" [(ngModel)]="customWidth" (input)="updateCustomSize()" />
-  <input type="number" [(ngModel)]="customHeight" (input)="updateCustomSize()" />
+  <input type="number" [(ngModel)]="customWidth" (input)="updateCustomSize()"  placeholder="W"/>
+  <input type="number" [(ngModel)]="customHeight" (input)="updateCustomSize()" placeholder="H"/>
   
   <div style="height: 70vh">
     <pintura-editor
