@@ -10,13 +10,14 @@ import { FilePondModule, registerPlugin } from 'ngx-filepond';
 import FilePondPluginFilePoster from 'filepond-plugin-file-poster';
 
 import FilePondPluginImageEditor from '@pqina/filepond-plugin-image-editor';
+import { FormsModule } from '@angular/forms';
 
 registerPlugin(FilePondPluginFilePoster, FilePondPluginImageEditor);
 
 @NgModule({
   declarations: [AppComponent],
-  imports: [BrowserModule, AngularPinturaModule, FilePondModule],
+  imports: [BrowserModule, AngularPinturaModule, FilePondModule,FormsModule],
   providers: [],
   bootstrap: [AppComponent],
 })
-export class AppModule {}
+export class AppModule { }

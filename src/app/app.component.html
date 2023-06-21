@@ -1,54 +1,30 @@
-<style>
-  :host {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-      Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-      "Segoe UI Symbol";
-    font-size: 14px;
-    color: #333;
-    box-sizing: border-box;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    padding: 2em;
-  }
-
-  img {
-    max-width: 100%;
-  }
-
-  pintura-editor {
-    box-shadow: 0 0 0 1px #eee;
-  }
-</style>
 
 <div>
   <h1>Pintura Image Editor</h1>
-
-  <h2>Inline</h2>
-
   <p>
-    <button
-      (click)="
-        this.inlineCropAspectRatio = this.inlineCropAspectRatio === 1 ? 2 : 1
-      "
-    >
+    <button  (click)="toggleAspectRatio()">
       Toggle crop aspect ratio
     </button>
+    <label>{{ getAspectRatioText() }}</label>
   </p>
-
+  <input type="number" [(ngModel)]="customWidth" (input)="updateCustomSize()" />
+  <input type="number" [(ngModel)]="customHeight" (input)="updateCustomSize()" />
+  
   <div style="height: 70vh">
     <pintura-editor
-      #inlineEditor
-      [options]="editorOptions"
-      [src]="inlineSrc"
-      [imageCropAspectRatio]="inlineCropAspectRatio"
-      (load)="handleInlineLoad($event)"
-      (process)="handleInlineProcess($event)"
-    ></pintura-editor>
+    #inlineEditor
+    [options]="editorOptions"
+    [src]="inlineSrc"
+    [imageCropAspectRatio]="currentAspectRatio"
+    (load)="handleInlineLoad($event)"
+    (process)="handleInlineProcess($event)"
+  ></pintura-editor>
+  
   </div>
 
   <p><img *ngIf="inlineResult" [src]="inlineResult" alt="" /></p>
 
-  <h2>Modal</h2>
+  <!-- <h2>Modal</h2>
 
   <button (click)="modalVisible = true">Show Modal</button>
 
@@ -60,44 +36,43 @@
     (hide)="modalVisible = false"
     (load)="handleModalLoad($event)"
     (process)="handleModalProcess($event)"
-  ></pintura-editor-modal>
+  ></pintura-editor-modal> -->
 
-  <p><img *ngIf="modalResult" [src]="modalResult" alt="" /></p>
+  <!-- <p><img *ngIf="modalResult" [src]="modalResult" alt="" /></p>     
 
-  <h2>Overlay</h2>
+  <h2>Overlay</h2> -->
 
-  <p>
+  <!-- <p>
     <button *ngIf="!overlayVisible" (click)="overlayVisible = true">
       Edit image
     </button>
     <button *ngIf="overlayVisible" (click)="overlayVisible = false">
       Close editor
     </button>
-  </p>
+  </p> -->
 
-  <p *ngIf="!overlayVisible">
+  <!-- <p *ngIf="!overlayVisible">
     <img [src]="overlayResult || overlaySrc" width="512" height="256" alt="" />
-  </p>
+  </p> -->
 
-  <div *ngIf="overlayVisible" style="width: 512px; height: 256px">
+  <!-- <div *ngIf="overlayVisible" style="width: 512px; height: 256px">
     <pintura-editor-overlay
       [options]="overlayOptions"
       [src]="overlaySrc"
-      (load)="handleOverlayLoad($event)"
+      (load)="handleOverlayLoad($event)"  
       (process)="handleOverlayProcess($event)"
     ></pintura-editor-overlay>
-  </div>
+  </div> -->
 
   <h2>FilePond</h2>
 
   <file-pond
-    #myPond
-    [options]="pondOptions"
-    [files]="pondFiles"
-    (oninit)="pondHandleInit()"
-    (onaddfile)="pondHandleAddFile($event)"
-    (onactivatefile)="pondHandleActivateFile($event)"
-    (onpreparefile)="pondHandlePrepareFile($event)"
-  >
-  </file-pond>
+  #myPond
+  [files]="pondFiles"
+  (oninit)="pondHandleInit()"
+  (onaddfile)="pondHandleAddFile($event)"
+  (onactivatefile)="pondHandleActivateFile($event)"
+  (onpreparefile)="pondHandlePrepareFile($event)"
+>
+</file-pond>
 </div>

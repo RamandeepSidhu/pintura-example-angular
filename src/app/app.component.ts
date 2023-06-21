@@ -33,6 +33,7 @@ import {
   legacyDataToImageState,
   openEditor,
   processImage,
+  PinturaImageState,
 } from '@pqina/pintura';
 
 setPlugins(plugin_crop, plugin_finetune, plugin_filter, plugin_annotate);
@@ -43,9 +44,34 @@ setPlugins(plugin_crop, plugin_finetune, plugin_filter, plugin_annotate);
   styleUrls: [],
 })
 export class AppComponent {
-  @ViewChild('inlineEditor') inlineEditor?: PinturaEditorComponent<any> =
-    undefined;
+  @ViewChild('inlineEditor') inlineEditor?: PinturaEditorComponent<any> = undefined;
 
+  customWidth: number = 0;
+  customHeight: number = 0;
+  imageWidth: number = 0;
+  imageHeight: number = 0;
+    
+    aspectRatios: any[] = [
+      { ratio: 1, name: '1:1 - Square' },
+      { ratio: 4 / 3, name: '4:3 - Standard' },
+      { ratio: 16 / 9, name: '16:9 - Widescreen' },
+      { ratio: 21 / 9, name: '21:9 - Ultra-Wide' },
+      { ratio: 2.35, name: '2.35:1 - CinemaScope' },
+      { ratio: 5 / 4, name: '5:4 - SXGA' },
+      { ratio: 3 / 2, name: '3:2 - Classic' },
+      { ratio: 18 / 9, name: '18:9 - FullView' },
+      { ratio: 19.5 / 9, name: '19.5:9 - FullView Plus' },
+      { ratio: 3, name: '3:1 - Panorama' },
+      { ratio: 2, name: '2:1 - Univisium' },
+      { ratio: 9 / 16, name: '9:16 - Portrait' },
+      { ratio: 1.85, name: '1.85:1 - Standard widescreen cinematic aspect ratio' },
+      { ratio: 16 / 10, name: '16:10 - Widescreen' },
+      { ratio: 8 / 5, name: '8:5 - Widescreen' },
+      { ratio: 2 / 3, name: '2:3 - Medium format photography' },
+      { ratio: 7 / 5, name: '7:5 - Photography' },
+      { ratio: 4 / 5, name: '4:5 - Portrait' }
+    ];
+        currentAspectRatioIndex: number = 0;
   constructor(private sanitizer: DomSanitizer) {}
 
   // editor generic state
@@ -71,27 +97,47 @@ export class AppComponent {
   inlineResult?: string = undefined;
   inlineCropAspectRatio = 1;
 
-  handleInlineLoad($event: any) {
+handleInlineLoad($event: any) {
     console.log('inline load', $event);
-
-    console.log('inline component ref', this.inlineEditor);
-
-    console.log('inline editor instance ref', this.inlineEditor?.editor);
-
-    console.log(
-      'inline editor image state',
-      this.inlineEditor?.editor?.imageState
-    );
+    const imageElement = $event.imageState?.image;
+    if (imageElement) {
+      this.imageWidth = imageElement.width;
+      this.imageHeight = imageElement.height;
+    }
   }
-
   handleInlineProcess($event: any) {
     console.log('inline process', $event);
-
+  
     const objectURL = URL.createObjectURL($event.dest);
-    this.inlineResult = this.sanitizer.bypassSecurityTrustResourceUrl(
-      objectURL
-    ) as string;
+    this.inlineResult = this.sanitizer.bypassSecurityTrustResourceUrl(objectURL) as string;
+  
+    // Set custom crop rectangle if custom height and width are provided
+    if (this.customHeight && this.customWidth) {
+      const editorState: any | undefined = this.inlineEditor?.editor?.imageState;
+      if (editorState) {
+        const updatedImageState: any = {
+          ...editorState,
+          crop: {
+            ...editorState.crop,
+            rect: {
+              x: 0,
+              y: 0,
+              width: this.customWidth,
+              height: this.customHeight,
+            },
+          },
+        };
+        if (this.inlineEditor && this.inlineEditor.editor && this.inlineEditor.editor.imageState) {
+          this.inlineEditor.editor.imageState = updatedImageState;
+        }
+              }
+    }
+  
+    // Reset custom height and width values
+    this.customHeight = 0;
+    this.customWidth = 0;
   }
+  
 
   // modal
   modalSrc: string = 'assets/image.jpeg';
@@ -189,7 +235,6 @@ export class AppComponent {
         // This will set a square crop aspect ratio
         imageCropAspectRatio: 1,
 
-        // The icons and labels to use in the user interface (required)
         locale: {
           ...LocaleCore,
           ...LocaleCrop,
@@ -197,6 +242,11 @@ export class AppComponent {
           ...LocaleFilter,
           ...LocaleAnnotate,
           ...LocaleMarkupEditor,
+        },
+        imageResize: {
+          // Set the maximum width and height for resizing
+          maxWidth: 800,
+          maxHeight: 800,
         },
       },
     },
@@ -212,16 +262,82 @@ export class AppComponent {
     console.log('A file was added', event);
   }
 
+  // pondHandlePrepareFile(event: any) {
+  //   const file = event.file;
+  //   const reader = new FileReader();
+  //   reader.onload = (e) => {
+  //     this.inlineSrc = e.target?.result as string;
+  //     this.currentAspectRatioIndex = 0; // Reset the aspect ratio to the first one
+  //   };
+  //   reader.readAsDataURL(file.file);
+  // }
   pondHandlePrepareFile(event: any) {
-    console.log('A file was prepared', event);
-    // Append output image to page for testing
-    // const url = URL.createObjectURL(event.output);
-    // const img = new Image();
-    // img.src = url;
-    // document.body.append(img);
+    const file = event.file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.inlineSrc = e.target?.result as string;
+      this.currentAspectRatioIndex = 0; // Reset the aspect ratio to the first one
+  
+      if (this.customWidth && this.customHeight) {
+        // Calculate the maximum width and height based on the custom size
+        const aspectRatio = this.customWidth / this.customHeight;
+        const maxWidth = aspectRatio >= 1 ? this.customWidth : this.customHeight;
+        const maxHeight = aspectRatio >= 1 ? this.customHeight : this.customWidth;
+  
+        // Update the image resize options
+        this.editorOptions.imageResize.maxWidth = maxWidth;
+        this.editorOptions.imageResize.maxHeight = maxHeight;
+      } else {
+        // Reset the image resize options to their default values
+        this.editorOptions.imageResize.maxWidth = 800;
+        this.editorOptions.imageResize.maxHeight = 800;
+      }
+    };
+    reader.readAsDataURL(file.file);
   }
+  
+  
 
   pondHandleActivateFile(event: any) {
     console.log('A file was activated', event);
   }
+  get currentAspectRatio(): number {
+    return this.aspectRatios[this.currentAspectRatioIndex].ratio;
+  }
+  
+  toggleAspectRatio(): void {
+    this.currentAspectRatioIndex = (this.currentAspectRatioIndex + 1) % this.aspectRatios.length;
+  }
+  
+  getAspectRatioText(): string {
+    const currentAspectRatio = this.aspectRatios[this.currentAspectRatioIndex];
+    return `Current Aspect Ratio: ${currentAspectRatio.name}`;
+  }
+
+  updateCustomSize(): void {
+    if (
+      this.customHeight &&
+      this.customWidth &&
+      this.inlineEditor &&
+      this.inlineEditor.editor &&
+      this.inlineEditor.editor.imageState &&
+      this.inlineEditor.editor.imageState.crop
+    ) {
+      const crop = this.inlineEditor.editor.imageState.crop;
+      const x = crop.x !== undefined ? crop.x : 0;
+      const y = crop.y !== undefined ? crop.y : 0;
+  
+      const updatedImageState: PinturaImageState = {
+        ...this.inlineEditor.editor.imageState,
+        crop: {
+          x,
+          y,
+          width: this.customWidth,
+          height: this.customHeight,
+        },
+      };
+  
+      this.inlineEditor.editor.imageState = updatedImageState;
+    }
+}
 }
